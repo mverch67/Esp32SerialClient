@@ -8,9 +8,12 @@
 #endif
 
 void mt_serial_init(int8_t rx_pin, int8_t tx_pin, uint32_t baud) {
-#ifndef ARDUINO_ARCH_SAMD
+#ifdef MT_SOFTWARESERIAL_SUPPORTED
   serial = new SoftwareSerial(rx_pin, tx_pin);
+#endif
   serial->begin(baud);
+#ifndef MT_SOFTWARESERIAL_SUPPORTED
+  serial->setPins(rx_pin, tx_pin);
 #endif
   mt_wifi_mode = false;
   mt_serial_mode = true;

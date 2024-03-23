@@ -3,7 +3,7 @@
 
 #ifdef ARDUINO_ARCH_SAMD
 #define MT_WIFI_SUPPORTED
-#else
+#elif !defined (ARCH_ESP32)
 #define MT_SOFTWARESERIAL_SUPPORTED
 #endif
 
