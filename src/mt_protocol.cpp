@@ -22,7 +22,7 @@ uint32_t want_config_id = 0;
 // Node number of the MT node hosting our WiFi
 uint32_t my_node_num = 0;
 
-bool mt_debugging = false;
+bool mt_debugging = true;
 void (*text_message_callback)(uint32_t from, const char* text) = NULL;
 void (*node_report_callback)(mt_node_t *, mt_nr_progress_t) = NULL;
 mt_node_t node;
@@ -226,6 +226,8 @@ bool handle_packet(uint32_t now, size_t payload_len) {
       return handle_config_complete_id(now, fromRadio.config_complete_id);
     case meshtastic_FromRadio_packet_tag:
       return handle_mesh_packet(&fromRadio.packet);
+    case meshtastic_FromRadio_rebooted_tag:
+      return mt_request_node_report(node_report_callback);
     default:
       if (mt_debugging) {
         Serial.print("Got a payloadVariant we don't recognize: ");
@@ -245,7 +247,7 @@ void mt_protocol_check_packet(uint32_t now) {
   }
 
   if (pb_buf[0] != MT_MAGIC_0 || pb_buf[1] != MT_MAGIC_1) {
-    d("Got bad magic");
+    //d("Got bad magic");
     return;
   }
 
@@ -256,12 +258,11 @@ void mt_protocol_check_packet(uint32_t now) {
   }
 
   if ((size_t)(payload_len + 4) > pb_size) {
-    // d("Partial packet");
+    d("Partial packet");
     delay(NO_NEWS_PAUSE);
     return;
   }
 
-  /*
   if (mt_debugging) {
     Serial.print("Got a full packet! ");
     for (int i = 0 ; i < pb_size ; i++) {
@@ -270,7 +271,6 @@ void mt_protocol_check_packet(uint32_t now) {
     }
     Serial.println();
   }
-  */
 
   handle_packet(now, payload_len);
 }
@@ -289,11 +289,13 @@ bool mt_loop(uint32_t now) {
 #else
     return false;
 #endif
-  } else if (mt_serial_mode) {
-    rv = mt_serial_loop();
+  }
+  else if (mt_serial_mode) {
+      rv = mt_serial_loop();
     if (rv) bytes_read = mt_serial_check_radio((char *)pb_buf + pb_size, space_left);
-  } else {
-    Serial.println("mt_loop() called but it was never initialized");
+  }
+  else {
+      Serial.println("mt_loop() called but it was never initialized. Program halted!");
     while(1);
   }
 

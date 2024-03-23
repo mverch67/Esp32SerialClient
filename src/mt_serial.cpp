@@ -4,7 +4,7 @@
   #include <SoftwareSerial.h>
   SoftwareSerial *serial;
 #else
-  #define serial (&Serial1)
+  #define serial (&Serial2)
 #endif
 
 void mt_serial_init(int8_t rx_pin, int8_t tx_pin, uint32_t baud) {
@@ -46,6 +46,10 @@ size_t mt_serial_check_radio(char * buf, size_t space_left) {
       d("Serial overflow");
       break;
     }
+  }
+  if (mt_debugging && bytes_read > 0) {
+    Serial.print("Received bytes len=");
+    Serial.println(bytes_read);
   }
   return bytes_read;
 }

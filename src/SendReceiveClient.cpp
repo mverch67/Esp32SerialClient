@@ -20,13 +20,18 @@
 // Pins to use for SoftwareSerial. Boards that don't use SoftwareSerial, and
 // instead provide their own Serial1 connection through fixed pins
 // will ignore these settings and use their own.
-#define SERIAL_RX_PIN 13
-#define SERIAL_TX_PIN 15
-// A different baud rate to communicate with the Meshtastic device can be specified here
-#define BAUD_RATE 9600
+#ifndef SERIAL_RX_PIN
+#define SERIAL_RX_PIN 16
+#endif
+#ifndef SERIAL_TX_PIN
+#define SERIAL_TX_PIN 17
+#endif
+#ifndef BAUD_RATE
+#define BAUD_RATE 57600
+#endif
 
 // Send a text message every this many seconds
-#define SEND_PERIOD 300
+#define SEND_PERIOD 60
 
 uint32_t next_send_time = 0;
 bool not_yet_connected = true;
@@ -35,6 +40,7 @@ bool not_yet_connected = true;
 void connected_callback(mt_node_t *node, mt_nr_progress_t progress) {
   if (not_yet_connected) 
     Serial.println("Connected to Meshtastic device!");
+  Serial.print("progress: "); Serial.println(progress);
   not_yet_connected = false;
 }
 
@@ -49,7 +55,7 @@ void text_message_callback(uint32_t from, const char* text) {
 
 void setup() {
   // Try for up to five seconds to find a serial port; if not, the show must go on
-  Serial.begin(9600);
+  Serial.begin(115200);
   while(true) {
     if (Serial) break;
     if (millis() > 5000) {
@@ -66,7 +72,8 @@ void setup() {
   Serial.print("wifi");
   mt_wifi_init(WIFI_CS_PIN, WIFI_IRQ_PIN, WIFI_RESET_PIN, WIFI_ENABLE_PIN, WIFI_SSID, WIFI_PASS);
 #else
-  Serial.print("serial");
+  Serial.print("serial (RX="); Serial.print(SERIAL_RX_PIN);
+  Serial.print(", TX="); Serial.print(SERIAL_TX_PIN); Serial.print(") ");
   mt_serial_init(SERIAL_RX_PIN, SERIAL_TX_PIN, BAUD_RATE);
 #endif
   Serial.println(" mode");
@@ -81,6 +88,8 @@ void setup() {
 
   // Register a callback function to be called whenever a text message is received
   set_text_message_callback(text_message_callback);
+
+  Serial.println("Setup done. Waiting for meshtastic connection.");
 }
 
 void loop() {
@@ -88,7 +97,7 @@ void loop() {
   uint32_t now = millis();
 
   // Run the Meshtastic loop, and see if it's able to send requests to the device yet
-  bool can_send = mt_loop(now);
+  bool can_send = mt_loop(now) && !not_yet_connected;
 
   // If we can send, and it's time to do so, send a text message and schedule the next one.
   if (can_send && now >= next_send_time) {
